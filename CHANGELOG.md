@@ -1,5 +1,10 @@
 # 更新日志
 
+## v1.0.1
+
+- 去掉 `po0fw` 命令（`system/bin/po0fw`）：模块不再挂载任何系统文件，KernelSU / APatch 不需要元模块（metamodule）
+- 填 token、看日志、查证书都在 WebUI 里完成；排查时可用完整路径 `su -c sh /data/adb/modules/po0fw/po0fw.sh <命令>`
+
 ## v1.0.0
 
 - 首个版本：切网即时加白 + 定时兜底（默认 10 分钟）

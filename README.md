@@ -33,7 +33,7 @@ flowchart LR
 - **失败退避重试**：5 → 15 → 30 → 60 → 120 → 300 秒；token 错误（HTTP 4xx）按兜底间隔再试，不狂刷
 - **状态一目了然**：模块列表描述实时显示 `[✅ 09:12 已加白 · Wi-Fi]`；管理器「操作」按钮立即加白并显示结果
 - **即改即生效**：改配置、在管理器里停用 / 启用模块都几秒内生效，不用重启
-- `po0fw` 命令行 + KernelSU / APatch WebUI
+- WebUI：看状态、填 token、改兜底间隔、立即加白、看日志、查证书
 - 支持纯 IPv6 蜂窝（464XLAT）、自签证书（公钥固定）、同时加白多个接口
 - token 不写进日志，发请求时也不会出现在进程命令行里
 - 省电：平时阻塞等待，不轮询；深度睡眠时不唤醒 CPU，醒来后补做逾期的兜底
@@ -47,29 +47,34 @@ flowchart LR
 
 要求：arm64-v8a 或 armeabi-v7a 设备；Magisk ≥ 20.4（「操作」按钮需要 Magisk ≥ 28）、KernelSU 或 APatch。
 
+模块不挂载任何系统文件，KernelSU / APatch **不需要装元模块**（metamodule）。
+
 ## 填 token
 
 任选一种，改完不用重启，几秒内生效：
 
-- **终端**（Termux 等）：`su -c po0fw token 你的token`，或 `su -c po0fw url 完整URL`
+- **WebUI**（推荐）：在 KernelSU / APatch 管理器里打开本模块的 WebUI，填 token 后点「保存并加白」（Magisk 可用 MMRL 等支持模块 WebUI 的应用）
 - **文件**：用 MT 管理器编辑 `/data/adb/po0fw/config.conf`，把 `URL=` 里的「你的token」换掉
-- **WebUI**：在 KernelSU / APatch 管理器里打开本模块的 WebUI（Magisk 可用 MMRL 等支持模块 WebUI 的应用）
 - **刷入前**：用 MT 直接编辑 zip 里的 `config.conf`，安装时会自动带上
 
 然后在管理器里点「操作」，看到 `HTTP 200` 就成功了。
 
-## 命令
+## 命令行（排查用，可选）
+
+平时用 WebUI 和「操作」按钮就够了。模块不往系统里装命令，需要时用完整路径执行主脚本：
 
 ```
-su -c po0fw status              运行状态、当前网络、上次结果
-su -c po0fw now                 立即加白一次
-su -c po0fw token <token>       设置 token 并立即加白
-su -c po0fw url <URL>           设置完整 URL 并立即加白
-su -c po0fw set INTERVAL 300    修改其他配置项
-su -c po0fw log [行数|-f]       查看日志
-su -c po0fw cert                查看服务端证书和公钥 PIN
-su -c po0fw net                 查看识别到的默认网络
-su -c po0fw start|stop|restart
+su -c sh /data/adb/modules/po0fw/po0fw.sh <命令>
+
+status              运行状态、当前网络、上次结果
+now                 立即加白一次
+token <token>       设置 token 并立即加白
+url <URL>           设置完整 URL 并立即加白
+set INTERVAL 300    修改其他配置项
+log [行数|-f]       查看日志
+cert                查看服务端证书和公钥 PIN
+net                 查看识别到的默认网络
+start|stop|restart
 ```
 
 ## 配置项
@@ -83,7 +88,7 @@ su -c po0fw start|stop|restart
 | `SETTLE` | `3` | 网络变化后等多少秒网络安静了再加白 |
 | `BIND_IFACE` | `1` | `1` 绑定物理网卡直连；`0` 走系统默认路由（开着 VPN 时会走代理） |
 | `IFACE` | 空 | 手动指定网卡；留空自动识别系统默认网络 |
-| `INSECURE` / `PIN` | `0` / 空 | 服务端是自签证书时：`INSECURE=1` 并填 `PIN=sha256//…`（`po0fw cert` 可查） |
+| `INSECURE` / `PIN` | `0` / 空 | 服务端是自签证书时：`INSECURE=1` 并填 `PIN=sha256//…`（WebUI「证书信息」可查） |
 | `TIMEOUT` | `10` | 单次请求超时（秒） |
 | `IPV` | `4` | `4` 只走 IPv4；`6` 只走 IPv6；留空自动 |
 | `DNS` | `223.5.5.5 119.29.29.29` | 仅 URL 写域名时使用，同样经物理网卡直连解析，避开代理的 fake-ip |
@@ -99,10 +104,10 @@ su -c po0fw start|stop|restart
 
 ## 排查
 
-- 日志在 `/data/adb/po0fw/po0fw.log`，或执行 `su -c po0fw log`
-- **证书校验失败**：先执行 `su -c po0fw cert`。确认是服务端自签证书的话，设 `INSECURE=1` 并填上显示的 `PIN`
+- 日志在 `/data/adb/po0fw/po0fw.log`，或在 WebUI 里点「查看日志」
+- **证书校验失败**：先在 WebUI 里点「证书信息」。确认是服务端自签证书的话，设 `INSECURE=1` 并填上显示的 `PIN`
 - **HTTP 403**：token 不对，或接口拒绝了请求
-- **一直显示「等待网络」**：当前没有可用的 IPv4 网络，可以用 `su -c po0fw net` 看识别结果
+- **一直显示「等待网络」**：当前没有可用的 IPv4 网络，可以用上面命令行里的 `net` 看识别结果
 - **用 box / akashaProxy 这类 iptables 透明代理**（而不是 VPN 模式）：这类代理可能连 root 自己的流量也拦截，请在代理规则里让加白接口的 IP 走直连，或者把 uid 0 排除
 - 系统的 `ip` 不支持 `monitor` 时，会自动退回每 5 秒检查一次网络，日志里会有提示
 

@@ -22,7 +22,6 @@ rm -rf "$MODPATH/src"
 set_perm_recursive "$MODPATH" 0 0 0755 0644
 set_perm "$MODPATH/bin/po0req" 0 0 0755
 set_perm "$MODPATH/po0fw.sh" 0 0 0755
-set_perm "$MODPATH/system/bin/po0fw" 0 2000 0755
 
 if ! "$MODPATH/bin/po0req" -version >/dev/null 2>&1; then
 	abort "! po0req 无法在本机运行"
@@ -54,9 +53,9 @@ chmod 600 "$DATADIR/config.conf"
 if grep -q "$PLACEHOLDER" "$DATADIR/config.conf"; then
 	ui_print " "
 	ui_print "! 还没填 token。重启后任选一种方式："
-	ui_print "  ① MT 管理器编辑 $DATADIR/config.conf"
+	ui_print "  ① 打开本模块的 WebUI 填写"
+	ui_print "  ② MT 管理器编辑 $DATADIR/config.conf"
 	ui_print "     把「你的token」换成自己的"
-	ui_print "  ② 终端执行：su -c po0fw token 你的token"
 	ui_print "  改完即生效，无需再重启"
 else
 	ui_print "- 加白 URL 已配置"
