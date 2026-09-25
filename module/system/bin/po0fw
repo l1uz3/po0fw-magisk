@@ -1,0 +1,3 @@
+#!/system/bin/sh
+# 命令行入口：su -c po0fw help
+exec sh /data/adb/modules/po0fw/po0fw.sh "$@"
