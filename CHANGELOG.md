@@ -1,5 +1,10 @@
 # 更新日志
 
+## v1.0.1
+
+- KernelSU / APatch 不再需要元模块（metamodule）：模块不带 `system/`，`po0fw` 命令放进 su 自带的 PATH（`/data/adb/ksu/bin`、`/data/adb/ap/bin`），Magisk 照旧用 `system/bin`
+- 卸载时一并删除命令行入口
+
 ## v1.0.0
 
 - 首个版本：切网即时加白 + 定时兜底（默认 10 分钟）

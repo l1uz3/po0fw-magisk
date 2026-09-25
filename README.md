@@ -47,6 +47,8 @@ flowchart LR
 
 要求：arm64-v8a 或 armeabi-v7a 设备；Magisk ≥ 20.4（「操作」按钮需要 Magisk ≥ 28）、KernelSU 或 APatch。
 
+KernelSU / APatch **不需要装元模块**（metamodule）：模块不挂载任何系统文件，`po0fw` 命令放在 su 自带的 PATH（`/data/adb/ksu/bin`、`/data/adb/ap/bin`）里。
+
 ## 填 token
 
 任选一种，改完不用重启，几秒内生效：
@@ -104,6 +106,7 @@ su -c po0fw start|stop|restart
 - **HTTP 403**：token 不对，或接口拒绝了请求
 - **一直显示「等待网络」**：当前没有可用的 IPv4 网络，可以用 `su -c po0fw net` 看识别结果
 - **用 box / akashaProxy 这类 iptables 透明代理**（而不是 VPN 模式）：这类代理可能连 root 自己的流量也拦截，请在代理规则里让加白接口的 IP 走直连，或者把 uid 0 排除
+- **KernelSU / APatch 上提示找不到 `po0fw` 命令**：确认刷完重启过；也可以直接用完整路径 `su -c sh /data/adb/modules/po0fw/po0fw.sh status`
 - 系统的 `ip` 不支持 `monitor` 时，会自动退回每 5 秒检查一次网络，日志里会有提示
 
 ## 开发

@@ -9,7 +9,7 @@
 #
 # 用法：po0fw help
 
-PO0FW_VER=v1.0.0
+PO0FW_VER=v1.0.1
 
 # ---- 统一交给 busybox ash（standalone 模式）执行，各 root 方案行为一致 ----
 if [ -z "$PO0FW_BB" ]; then

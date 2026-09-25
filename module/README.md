@@ -6,7 +6,7 @@
 - **不怕代理 VPN**：请求用 root 绑定当前物理网卡（Wi-Fi / 蜂窝）直连，命中 Android netd 给 root 的
   「oif + uid 0」路由规则，绕过 sing-box / Clash 等 VpnService，服务端看到的一定是真实出口 IP，
   不会加白成代理出口。
-- **不怕被杀后台**：开机由 Magisk 拉起的 root 守护进程，没有电池优化 / 自启动限制，不需要常驻 App。
+- **不怕被杀后台**：开机由 root 管理器拉起的守护进程，没有电池优化 / 自启动限制，不需要常驻 App。
 - **省电**：用 `ip monitor` 等内核网络事件，平时阻塞休眠；深度睡眠时不唤醒 CPU，醒来后补做逾期的兜底。
 
 ## 触发时机
@@ -75,4 +75,5 @@ su -c po0fw start|stop|restart
 
 - `bin/po0req` 是用纯 Go 标准库写的小工具（源码在 `src/`，`sh src/build.sh` 可自行编译），负责绑定网卡、
   按 Android 系统 CA 校验证书、把 token 从日志和进程命令行里藏起来。
-- 卸载模块会一并删除 `/data/adb/po0fw`（配置与日志）。
+- KernelSU / APatch 不需要元模块：`po0fw` 命令放在 `/data/adb/ksu/bin` 或 `/data/adb/ap/bin`，不挂载系统文件。
+- 卸载模块会一并删除 `/data/adb/po0fw`（配置与日志）和命令行入口。
