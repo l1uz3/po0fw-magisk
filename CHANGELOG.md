@@ -2,8 +2,8 @@
 
 ## v1.0.1
 
-- KernelSU / APatch 不再需要元模块（metamodule）：模块不带 `system/`，`po0fw` 命令放进 su 自带的 PATH（`/data/adb/ksu/bin`、`/data/adb/ap/bin`），Magisk 照旧用 `system/bin`
-- 卸载时一并删除命令行入口
+- 去掉 `po0fw` 命令（`system/bin/po0fw`）：模块不再挂载任何系统文件，KernelSU / APatch 不需要元模块（metamodule）
+- 填 token、看日志、查证书都在 WebUI 里完成；排查时可用完整路径 `su -c sh /data/adb/modules/po0fw/po0fw.sh <命令>`
 
 ## v1.0.0
 

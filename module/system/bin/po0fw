@@ -1,5 +1,0 @@
-#!/system/bin/sh
-# 命令行入口：su -c po0fw help
-PO=/data/adb/modules/po0fw/po0fw.sh
-[ -f "$PO" ] || { echo "po0fw 模块未安装或已卸载" >&2; exit 1; }
-exec sh "$PO" "$@"

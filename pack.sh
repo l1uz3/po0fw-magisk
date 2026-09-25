@@ -27,6 +27,6 @@ OUT=$ROOT/dist/po0fw-$VER.zip
 rm -f "$OUT"
 cd "$STAGE"
 zip -qr9 -X "$OUT" META-INF module.prop customize.sh service.sh action.sh uninstall.sh \
-	po0fw.sh config.conf system bin webroot src README.md
+	po0fw.sh config.conf bin webroot src README.md
 rm -rf "$STAGE"
 echo "$OUT"

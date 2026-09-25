@@ -19,23 +19,9 @@ mv -f "$MODPATH/bin/$ABIDIR/po0req" "$MODPATH/bin/po0req"
 for d in "$MODPATH"/bin/*/; do rm -rf "$d"; done
 rm -rf "$MODPATH/src"
 
-# 命令行入口 po0fw：
-#   Magisk 自带 systemless 挂载 → 放在 system/bin
-#   KernelSU / APatch 挂载要靠元模块 → 不带 system/，开机时由 service.sh
-#   放进 su 自带的 PATH（/data/adb/ksu/bin 或 /data/adb/ap/bin），不需要元模块
-if [ "$KSU" = true ] || [ "$APATCH" = true ]; then
-	mv -f "$MODPATH/system/bin/po0fw" "$MODPATH/po0fw-cli"
-	rm -rf "$MODPATH/system"
-fi
-
 set_perm_recursive "$MODPATH" 0 0 0755 0644
 set_perm "$MODPATH/bin/po0req" 0 0 0755
 set_perm "$MODPATH/po0fw.sh" 0 0 0755
-if [ -f "$MODPATH/po0fw-cli" ]; then
-	set_perm "$MODPATH/po0fw-cli" 0 0 0755
-else
-	set_perm "$MODPATH/system/bin/po0fw" 0 2000 0755
-fi
 
 if ! "$MODPATH/bin/po0req" -version >/dev/null 2>&1; then
 	abort "! po0req 无法在本机运行"
@@ -67,9 +53,9 @@ chmod 600 "$DATADIR/config.conf"
 if grep -q "$PLACEHOLDER" "$DATADIR/config.conf"; then
 	ui_print " "
 	ui_print "! 还没填 token。重启后任选一种方式："
-	ui_print "  ① MT 管理器编辑 $DATADIR/config.conf"
+	ui_print "  ① 打开本模块的 WebUI 填写"
+	ui_print "  ② MT 管理器编辑 $DATADIR/config.conf"
 	ui_print "     把「你的token」换成自己的"
-	ui_print "  ② 终端执行：su -c po0fw token 你的token"
 	ui_print "  改完即生效，无需再重启"
 else
 	ui_print "- 加白 URL 已配置"

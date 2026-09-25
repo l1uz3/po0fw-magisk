@@ -7,7 +7,7 @@
 # POST 一次加白接口。请求用 root 绑定当前物理网卡直连（SO_BINDTODEVICE），
 # 绕过代理 / VPN，服务端看到的就是本机真实公网 IP。
 #
-# 用法：po0fw help
+# 用法：sh po0fw.sh help（平时用管理器里的 WebUI /「操作」按钮即可）
 
 PO0FW_VER=v1.0.1
 
@@ -385,7 +385,7 @@ result_text() {
 	4xx) echo "HTTP $R_CODE（token 不对 / 无权限？）${R_BODY:+ · $R_BODY}" ;;
 	http) echo "HTTP $R_CODE${R_LOC:+ → $R_LOC}${R_BODY:+ · $R_BODY}" ;;
 	body) echo "HTTP $R_CODE 但响应不匹配 OK_REGEX · $R_BODY" ;;
-	tls) echo "TLS 失败：$R_ERR（自签证书：su -c po0fw cert 查看后配置 INSECURE + PIN）" ;;
+	tls) echo "TLS 失败：$R_ERR（自签证书：WebUI 点「证书信息」查看后配置 INSECURE + PIN）" ;;
 	net) echo "网络错误：$R_ERR" ;;
 	*) echo "$R_ERR" ;;
 	esac
@@ -408,7 +408,7 @@ fire() {
 	load_config
 	if ! urls_ready; then
 		set_desc "⚠️ 未配置加白 URL"
-		log "[$reason] 未配置加白 URL：编辑 $CONF，或执行 su -c po0fw token <你的token>"
+		log "[$reason] 未配置加白 URL：在 WebUI 里填 token，或编辑 $CONF"
 		return 2
 	fi
 	if [ ! -x "$REQ" ]; then
@@ -638,7 +638,7 @@ check_ready() {
 	else
 		CONFIGURED=0
 		set_desc "⚠️ 未配置加白 URL"
-		log "未配置加白 URL：编辑 $CONF，或执行 su -c po0fw token <你的token>（改完自动生效）"
+		log "未配置加白 URL：在 WebUI 里填 token，或编辑 $CONF（改完自动生效）"
 	fi
 }
 
@@ -727,7 +727,7 @@ daemon_main() {
 			esac
 		fi
 		FORCE_IF=''
-		# ---- 定时兜底；手动 po0fw now 已加白过当前网络则不重复
+		# ---- 定时兜底；手动「立即加白」已加白过当前网络则不重复
 		state_load
 		if [ $PENDING = 1 ] && [ "$S_OK_FP" = "$NET_FP" ] && [ "$S_OK_UP" -gt "$PSINCE" ]; then
 			PENDING=0
@@ -815,7 +815,7 @@ cmd_status() {
 		case "$w" in ok*) w="事件监听正常" ;; down) w="ip monitor 不可用，轮询中" ;; *) w="启动中" ;; esac
 		echo "守护进程：运行中（pid $p，$w）"
 	else
-		echo "守护进程：未运行（su -c po0fw start 启动）"
+		echo "守护进程：未运行（点「操作」或重启手机即可启动）"
 	fi
 	[ -e "$MODDIR/disable" ] && echo "模块状态：已在管理器中停用，暂停加白"
 	if urls_ready; then
@@ -824,7 +824,7 @@ cmd_status() {
 $URLS
 EOF
 	else
-		echo "加白接口：⚠️ 未配置 —— su -c po0fw token <你的token>，或编辑 $CONF"
+		echo "加白接口：⚠️ 未配置 —— 在 WebUI 里填 token，或编辑 $CONF"
 	fi
 	if [ -n "$NET_IP" ]; then
 		echo "当前网络：$(fp_desc "$NET_FP")${NET_GW:+，网关 $NET_GW}（$NET_HOW）"
@@ -841,7 +841,7 @@ EOF
 	else
 		echo "上次成功：暂无"
 	fi
-	[ "$S_FAILS" -gt 0 ] && echo "最近失败：连续 $S_FAILS 次（$S_RESULT），详见 su -c po0fw log"
+	[ "$S_FAILS" -gt 0 ] && echo "最近失败：连续 $S_FAILS 次（$S_RESULT），详见日志 $LOG"
 	echo "触发方式：网络变化后约 ${SETTLE} 秒加白 + 每 ${INTERVAL} 秒兜底"
 	return 0
 }
@@ -875,7 +875,7 @@ cmd_set_url() {
 cmd_token() {
 	local t=${1#pgnfw_}
 	case "$t" in '' | *[!A-Za-z0-9_-]*)
-		echo "用法：po0fw token <你的token>（只能含字母、数字、_、-）"
+		echo "用法：po0fw.sh token <你的token>（只能含字母、数字、_、-）"
 		return 1
 		;;
 	esac
@@ -901,7 +901,7 @@ cmd_set() {
 		;;
 	esac ;;
 	*)
-		echo "可设置：INTERVAL SETTLE TIMEOUT BIND_IFACE INSECURE PIN IFACE IPV DNS DEBUG（URL 用 po0fw url / token）"
+		echo "可设置：INTERVAL SETTLE TIMEOUT BIND_IFACE INSECURE PIN IFACE IPV DNS DEBUG（URL 用 po0fw.sh url / token）"
 		return 1
 		;;
 	esac
@@ -954,11 +954,10 @@ cmd_action() {
 	if ! urls_ready; then
 		cat <<EOF
 ⚠️ 还没配置加白 URL，任选一种方式：
- ① 用 MT 管理器等打开
+ ① 打开本模块的 WebUI，填 token 后点「保存并加白」
+ ② 用 MT 管理器等打开
     $CONF
     把 URL= 里的「你的token」换成自己的，保存
- ② 终端（如 Termux）执行：
-    su -c po0fw token 你的token
 改完不用重启：守护进程 1 分钟内自动生效，或再点一次「操作」。
 EOF
 		daemon_pid >/dev/null || cmd_start
@@ -976,23 +975,25 @@ EOF
 		cmd_start
 	fi
 	echo ""
-	echo "最近记录（su -c po0fw log 查看更多）："
+	echo "最近记录（WebUI 里点「查看日志」看更多）："
 	tail -n 6 "$LOG" 2>/dev/null | cut -c 12-
 }
 
 cmd_help() {
 	cat <<EOF
-po0fw $PO0FW_VER —— 防火墙白名单自动加白（需 root：su -c po0fw ...）
+po0fw $PO0FW_VER —— 防火墙白名单自动加白
+平时用管理器里的 WebUI 或「操作」按钮即可；以下命令供排查用（需 root）：
+  su -c sh $SELF <命令>
 
-  po0fw status          运行状态、当前网络、上次结果
-  po0fw now             立即加白一次
-  po0fw token <token>   设置 token（自动拼成默认加白 URL）并立即加白
-  po0fw url <URL>       设置完整加白 URL 并立即加白
-  po0fw log [行数|-f]   查看日志（默认 30 行，-f 持续跟踪）
-  po0fw set <项> <值>    改其他配置，如 po0fw set INTERVAL 300
-  po0fw cert            查看服务端证书与公钥 PIN（排查 TLS 问题）
-  po0fw net             查看识别到的默认网络（排查用）
-  po0fw start|stop|restart
+  status                运行状态、当前网络、上次结果
+  now                   立即加白一次
+  token <token>         设置 token（自动拼成默认加白 URL）并立即加白
+  url <URL>             设置完整加白 URL 并立即加白
+  log [行数|-f]         查看日志（默认 30 行，-f 持续跟踪）
+  set <项> <值>          改其他配置，如 set INTERVAL 300
+  cert                  查看服务端证书与公钥 PIN（排查 TLS 问题）
+  net                   查看识别到的默认网络（排查用）
+  start|stop|restart
 
 配置：$CONF（改完保存即可，1 分钟内自动生效）
 EOF
@@ -1001,7 +1002,7 @@ EOF
 # ================================================================ 入口
 
 [ "$(id -u)" = 0 ] || {
-	echo "需要 root：su -c po0fw $*"
+	echo "需要 root：su -c sh $SELF $*"
 	exit 1
 }
 mkdir -p "$DATA"
