@@ -1,0 +1,7 @@
+id=po0fw
+name=po0fw 防火墙白名单自动加白
+version=v1.0.0
+versionCode=100
+author=l1uz3e
+description=切网即时 + 定时兜底自动 POST 加白接口；root 绑定物理网卡直连、绕过代理 VPN，加白的是本机真实公网 IP
+updateJson=https://raw.githubusercontent.com/l1uz3/po0fw-magisk/main/update.json

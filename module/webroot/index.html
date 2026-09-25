@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>po0fw 自动加白</title>
+<style>
+  :root {
+    --bg: #f5f6f8; --card: #ffffff; --fg: #1a1d23; --muted: #6b7280; --line: #e3e6eb;
+    --accent: #2563eb; --accent-fg: #ffffff; --pre: #f1f3f6; --warn: #b45309;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f1115; --card: #171a20; --fg: #e5e7eb; --muted: #9ca3af; --line: #2a2f38;
+      --accent: #6d9cff; --accent-fg: #0b1020; --pre: #111419; --warn: #f59e0b;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg);
+    font: 15px/1.55 system-ui, -apple-system, "PingFang SC", "Noto Sans CJK SC", "Microsoft YaHei", sans-serif;
+    padding: max(16px, env(safe-area-inset-top)) 16px max(28px, env(safe-area-inset-bottom));
+  }
+  main { max-width: 640px; margin: 0 auto; }
+  h1 { font-size: 20px; margin: 4px 0 2px; }
+  .sub { color: var(--muted); margin: 0 0 16px; font-size: 13px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px; margin-bottom: 12px; }
+  .card h2 { font-size: 15px; margin: 0 0 10px; display: flex; justify-content: space-between; align-items: center; }
+  label { display: block; color: var(--muted); font-size: 13px; margin-bottom: 6px; }
+  .row { display: flex; gap: 8px; }
+  .row > input { flex: 1; min-width: 0; }
+  input {
+    font: inherit; color: var(--fg); background: var(--pre); border: 1px solid var(--line);
+    border-radius: 8px; padding: 9px 10px; width: 100%;
+  }
+  input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  button {
+    font: inherit; border: 1px solid var(--line); background: var(--pre); color: var(--fg);
+    border-radius: 8px; padding: 9px 14px; white-space: nowrap; cursor: pointer;
+  }
+  button.primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+  button:disabled { opacity: .5; }
+  button.link { background: none; border: none; color: var(--accent); padding: 0; font-size: 13px; }
+  .actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  pre {
+    margin: 0; background: var(--pre); border-radius: 8px; padding: 10px; font-size: 12.5px; line-height: 1.5;
+    white-space: pre-wrap; word-break: break-all; font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    max-height: 50vh; overflow: auto;
+  }
+  .hint { color: var(--muted); font-size: 12.5px; margin: 8px 0 0; overflow-wrap: anywhere; }
+  .notice { color: var(--warn); font-size: 13px; margin: 0 0 12px; display: none; }
+</style>
+</head>
+<body>
+<main>
+  <h1>po0fw 防火墙自动加白</h1>
+  <p class="sub">切网即时 + 定时兜底 · 绑定物理网卡直连，绕过代理 VPN</p>
+  <p class="notice" id="notice">没检测到管理器的 WebUI 接口：请在 KernelSU / APatch 管理器或 MMRL 里打开本页。</p>
+
+  <section class="card">
+    <h2>状态 <button class="link" id="refresh">刷新</button></h2>
+    <pre id="status">加载中…</pre>
+  </section>
+
+  <section class="card">
+    <h2>加白接口</h2>
+    <label for="url">填 token，或完整 URL</label>
+    <div class="row">
+      <input id="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="你的 token 或 https://…">
+      <button class="primary" id="save-url">保存并加白</button>
+    </div>
+    <p class="hint">只填 token 会拼成 https://124.221.69.228/api/firewall/pgnfw_&lt;token&gt;/add</p>
+  </section>
+
+  <section class="card">
+    <h2>定时兜底</h2>
+    <label for="interval">间隔（秒，建议 300–900）</label>
+    <div class="row">
+      <input id="interval" type="number" inputmode="numeric" min="60" step="60" value="600">
+      <button id="save-interval">保存</button>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="actions">
+      <button class="primary" id="now">立即加白</button>
+      <button id="log">查看日志</button>
+      <button id="cert">证书信息</button>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>输出</h2>
+    <pre id="out">（点上面的按钮）</pre>
+  </section>
+</main>
+<script>
+  const PO = '/data/adb/modules/po0fw/po0fw.sh';
+  const $ = (id) => document.getElementById(id);
+  const sq = (s) => "'" + String(s).replace(/'/g, "'\\''") + "'";
+  const hasKsu = typeof window.ksu !== 'undefined' && typeof window.ksu.exec === 'function';
+  let seq = 0;
+
+  // KernelSU / APatch / MMRL 的 WebUI 接口：ksu.exec(cmd, options, 回调函数名)
+  function exec(cmd) {
+    return new Promise((resolve) => {
+      if (!hasKsu) return resolve({ errno: -1, stdout: '', stderr: '当前环境不支持执行命令' });
+      const cb = `po0fw_cb_${Date.now()}_${seq++}`;
+      window[cb] = (errno, stdout, stderr) => { delete window[cb]; resolve({ errno, stdout, stderr }); };
+      try {
+        window.ksu.exec(cmd, '{}', cb);
+      } catch (e) {
+        delete window[cb];
+        resolve({ errno: -1, stdout: '', stderr: String(e) });
+      }
+    });
+  }
+
+  function toast(msg) {
+    try { if (hasKsu && window.ksu.toast) window.ksu.toast(msg); } catch (e) { /* ignore */ }
+  }
+
+  function setBusy(busy) {
+    document.querySelectorAll('button').forEach((b) => { b.disabled = busy; });
+  }
+
+  async function po(args, target) {
+    setBusy(true);
+    const r = await exec(`sh ${PO} ${args}`);
+    setBusy(false);
+    const text = [r.stdout, r.stderr].filter(Boolean).join('\n').trim();
+    target.textContent = text || (r.errno ? `执行失败（${r.errno}）` : '（无输出）');
+    return r;
+  }
+
+  async function refresh() {
+    await po('status', $('status'));
+    const m = $('status').textContent.match(/每 (\d+) 秒兜底/);
+    if (m && document.activeElement !== $('interval')) $('interval').value = m[1];
+  }
+
+  $('refresh').addEventListener('click', refresh);
+  $('now').addEventListener('click', async () => { await po('now', $('out')); refresh(); });
+  $('log').addEventListener('click', () => po('log 60', $('out')));
+  $('cert').addEventListener('click', () => po('cert', $('out')));
+
+  $('save-url').addEventListener('click', async () => {
+    const v = $('url').value.trim();
+    if (!v) { toast('先填 token 或 URL'); $('url').focus(); return; }
+    const sub = /^https?:\/\//i.test(v) ? 'url' : 'token';
+    const r = await po(`${sub} ${sq(v)}`, $('out'));
+    if (!r.errno) { $('url').value = ''; toast('已保存'); }
+    refresh();
+  });
+
+  $('save-interval').addEventListener('click', async () => {
+    const v = parseInt($('interval').value, 10);
+    if (!Number.isFinite(v) || v < 60) { toast('间隔至少 60 秒'); return; }
+    await po(`set INTERVAL ${v}`, $('out'));
+    toast('已保存');
+    setTimeout(refresh, 800);
+  });
+
+  if (!hasKsu) $('notice').style.display = 'block';
+  refresh();
+</script>
+</body>
+</html>
