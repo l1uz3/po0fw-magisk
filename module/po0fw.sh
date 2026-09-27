@@ -9,7 +9,7 @@
 #
 # 用法：sh po0fw.sh help（平时用管理器里的 WebUI /「操作」按钮即可）
 
-PO0FW_VER=v1.0.1
+PO0FW_VER=v1.0.2
 
 # ---- 统一交给 busybox ash（standalone 模式）执行，各 root 方案行为一致 ----
 if [ -z "$PO0FW_BB" ]; then
@@ -92,7 +92,7 @@ ago() { # epoch → “N 分钟前”
 # ================================================================ 配置
 
 cfg_defaults() {
-	URLS='' INTERVAL=600 SETTLE=3 BIND_IFACE=1 IFACE='' INSECURE=0 PIN=''
+	URLS='' INTERVAL=600 SETTLE=1 BIND_IFACE=1 IFACE='' INSECURE=0 PIN=''
 	DNS='223.5.5.5 119.29.29.29' TIMEOUT=10 METHOD=POST IPV=4 OK_REGEX='' CA_DIRS=''
 	DEBUG=0 LOG_MAX_KB=256
 }

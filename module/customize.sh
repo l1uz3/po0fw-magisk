@@ -47,6 +47,11 @@ else
 	cp -f "$MODPATH/config.conf" "$DATADIR/config.conf"
 	ui_print "- 已生成配置：$DATADIR/config.conf"
 fi
+# v1.0.2 起切网加白的等待时间默认 1 秒：旧配置还是原默认值 3 的，一并改成 1
+if grep -q '^SETTLE=3$' "$DATADIR/config.conf"; then
+	sed -i 's/^SETTLE=3$/SETTLE=1/' "$DATADIR/config.conf"
+	ui_print "- 切网后加白等待时间改为 1 秒（SETTLE=1）"
+fi
 chmod 700 "$DATADIR"
 chmod 600 "$DATADIR/config.conf"
 
